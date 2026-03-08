@@ -3,7 +3,7 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "NODE_OPTIONS=--max-old-space-size=400 sh /app/scripts/bootstrap.sh"
+startCommand = "sh /app/scripts/bootstrap.sh"
 healthcheckPath = "/healthz"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

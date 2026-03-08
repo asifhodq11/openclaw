@@ -1,4 +1,5 @@
 #!/bin/sh
+echo "[bootstrap] 🚀 Script started at $(date)"
 # ═══════════════════════════════════════════════════════════════════════
 #  OpenClaw Railway Edition — bootstrap.sh
 #  Generates openclaw.json from env vars before first boot.
@@ -88,7 +89,7 @@ cat > "$CONFIG_FILE" << EOCONFIG
   "channels": {
     "telegram": {
       "botToken": "${TELEGRAM_BOT_TOKEN:-}",
-      "allowFrom": ["${TELEGRAM_ALLOWED_USER_ID:-}"],
+      "allowFrom": [$(if [ -n "$TELEGRAM_ALLOWED_USER_ID" ]; then echo "\"$TELEGRAM_ALLOWED_USER_ID\""; fi)],
       ${WEBHOOK_CONFIG}
       "groups": {}
     }
@@ -128,6 +129,6 @@ export NODE_OPTIONS="--max-old-space-size=400"
 echo "[bootstrap] ✅ Starting gateway on port ${PORT:-8080}..."
 
 # Start the gateway
-# We remove --config as it's not a valid CLI flag for 'gateway run'
-# We rely on OPENCLAW_CONFIG_PATH and OPENCLAW_STATE_DIR instead.
-exec openclaw gateway run --allow-unconfigured
+# Use node directly with full path to ensure it's found regardless of PATH setup.
+echo "[bootstrap] 🎬 Executing gateway..."
+exec node /app/openclaw.mjs gateway run --allow-unconfigured
