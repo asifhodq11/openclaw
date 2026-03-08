@@ -74,6 +74,9 @@ fi
 # ── Write openclaw.json (v2026 schema compliant) ───────────────────────
 cat > "$CONFIG_FILE" << EOCONFIG
 {
+  "_meta": {
+    "version": 1
+  },
   "agents": {
     "defaults": {
       "model": "${PRIMARY_MODEL}",
