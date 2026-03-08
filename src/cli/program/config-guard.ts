@@ -44,7 +44,11 @@ export async function ensureConfigReady(params: {
   suppressDoctorStdout?: boolean;
 }): Promise<void> {
   const commandPath = params.commandPath ?? [];
-  if (!didRunDoctorConfigFlow && shouldMigrateStateFromPath(commandPath)) {
+  if (
+    !didRunDoctorConfigFlow &&
+    shouldMigrateStateFromPath(commandPath) &&
+    process.env.OPENCLAW_SKIP_DOCTOR !== "1"
+  ) {
     didRunDoctorConfigFlow = true;
     const runDoctorConfigFlow = async () =>
       loadAndMaybeMigrateDoctorConfig({
