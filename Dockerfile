@@ -52,7 +52,7 @@ COPY scripts ./scripts
 COPY --from=ext-deps /out/ ./extensions/
 
 # Railway Edition: Reduced from 2048MB to 768MB — safe after removing A2UI/native apps
-RUN NODE_OPTIONS=--max-old-space-size=768 pnpm install --frozen-lockfile
+RUN NODE_OPTIONS=--max-old-space-size=512 pnpm install --frozen-lockfile
 
 COPY . .
 
