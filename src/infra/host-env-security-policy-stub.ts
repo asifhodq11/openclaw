@@ -1,4 +1,4 @@
-{
+export default {
   "blockedKeys": [
     "NODE_OPTIONS",
     "NODE_PATH",
