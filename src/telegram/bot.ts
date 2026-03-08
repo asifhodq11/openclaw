@@ -159,6 +159,51 @@ export function createTelegramBot(opts: TelegramBotOptions) {
     void opts.updateOffset.onUpdateId(safe);
   };
 
+  // ── OpenClaw Railway Edition: Inject Core Commands ────────
+  bot.command('health', async (ctx) => {
+    await ctx.reply('🟢 **OpenClaw Gateway is online.**\n\nSmart Router Mode: ACTIVE', { parse_mode: 'Markdown' });
+  });
+
+  bot.command('status', async (ctx) => {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const statePath = path.join(
+        process.env.OPENCLAW_STATE_DIR ?? `${process.env.HOME}/.openclaw`,
+        'smart-router/state.json'
+      );
+      if (!fs.existsSync(statePath)) {
+        await ctx.reply('Smart Router state is currently empty. No API calls made yet.');
+        return;
+      }
+      const state = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+      
+      let msg = `🤖 **Smart Router Provider Status**\n_Last Reset:_ ${state.lastReset || 'Never'}\n\n`;
+      let total = 0;
+      
+      for (const [providerModel, count] of Object.entries((state.usage || {}) as Record<string, number>)) {
+        msg += `• \`${providerModel}\`: **${count} calls**\n`;
+        total += count;
+      }
+      
+      if (Object.keys(state.cooldowns || {}).length > 0) {
+        msg += `\n⚠️ **Cooldowns Active:**\n`;
+        const now = Date.now();
+        for (const [provider, expiry] of Object.entries((state.cooldowns || {}) as Record<string, number>)) {
+          if (expiry > now) {
+            msg += `• \`${provider}\`: ${Math.ceil((expiry - now)/1000)}s remaining\n`;
+          }
+        }
+      }
+      
+      msg += `\n_Total calls today: ${total}_`;
+      await ctx.reply(msg, { parse_mode: 'Markdown' });
+    } catch(err: any) {
+      await ctx.reply(`⚠️ Failed to read router status: ${err.message}`);
+    }
+  });
+  // ─────────────────────────────────────────────────────────
+
   const shouldSkipUpdate = (ctx: TelegramUpdateKeyContext) => {
     const updateId = resolveTelegramUpdateId(ctx);
     const skipCutoff = highestPersistedUpdateId ?? initialUpdateId;
