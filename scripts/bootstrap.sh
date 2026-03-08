@@ -75,9 +75,6 @@ fi
 # ── Write openclaw.json (v2026 schema compliant) ───────────────────────
 cat > "$CONFIG_FILE" << EOCONFIG
 {
-  "_meta": {
-    "version": 1
-  },
   "agents": {
     "defaults": {
       "model": "${PRIMARY_MODEL}",
@@ -131,4 +128,8 @@ echo "[bootstrap] ✅ Starting gateway on port ${PORT:-8080}..."
 # Start the gateway
 # Use node directly with full path to ensure it's found regardless of PATH setup.
 echo "[bootstrap] 🎬 Executing gateway..."
-exec node /app/openclaw.mjs gateway run --allow-unconfigured
+exec node /app/openclaw.mjs gateway run \
+  --bind 0.0.0.0 \
+  --port "${PORT:-18789}" \
+  --allow-unconfigured \
+  --no-doctor
