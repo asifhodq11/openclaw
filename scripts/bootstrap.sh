@@ -1,19 +1,13 @@
 #!/bin/sh
-echo "[bootstrap] 🚀 Script started at $(date)"
-# ═══════════════════════════════════════════════════════════════════════
-#  OpenClaw Railway Edition — bootstrap.sh
-#  Generates openclaw.json from env vars before first boot.
-# ═══════════════════════════════════════════════════════════════════════
 set -e
+
+echo "[bootstrap] OpenClaw Railway Edition starting..."
 
 CONFIG_DIR="${OPENCLAW_STATE_DIR:-$HOME/.openclaw}"
 CONFIG_FILE="$CONFIG_DIR/openclaw.json"
 WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-$CONFIG_DIR/workspace}"
 
-echo "[bootstrap] OpenClaw Railway Edition starting..."
-
 # ── Fix Railway volume ownership ──────────────────────────────────────
-# Volume mounts as root:root drwxr-xr-x. Node user cannot write.
 if [ -d "/data" ] && [ ! -w "/data" ]; then
   echo "[bootstrap] WARNING: /data not writable by uid=$(id -u). Attempting chown..."
   chown -R "$(id -u):$(id -g)" /data 2>/dev/null || true
@@ -26,111 +20,157 @@ if [ -d "/data" ] && [ ! -w "/data" ]; then
   fi
 fi
 
-echo "[bootstrap] Config dir: $CONFIG_DIR"
-
-# ── Create all required directories ───────────────────────────────────
+# ── Create required directories ───────────────────────────────────────
 mkdir -p "$CONFIG_DIR"
 mkdir -p "$WORKSPACE_DIR"
-mkdir -p "$WORKSPACE_DIR/memory"
-mkdir -p "$WORKSPACE_DIR/skills"
-mkdir -p "$CONFIG_DIR/logs"
-mkdir -p "$CONFIG_DIR/credentials"
-mkdir -p "$CONFIG_DIR/smart-router"
+mkdir -p "$WORKSPACE_DIR/skills/smart-router"
+mkdir -p "$WORKSPACE_DIR/skills/status-command"
 
-# ── Touch required files ──────────────────────────────────────────────
-touch "$WORKSPACE_DIR/MEMORY.md"       2>/dev/null || true
-touch "$WORKSPACE_DIR/AGENTS.md"       2>/dev/null || true
-if [ -f "/app/SOUL.md" ]; then cp "/app/SOUL.md" "$WORKSPACE_DIR/SOUL.md"; else touch "$WORKSPACE_DIR/SOUL.md" 2>/dev/null || true; fi
-touch "$WORKSPACE_DIR/memory/healthcheck.md" 2>/dev/null || true
+# ── Create SOUL.md ────────────────────────────────────────────────────
+cat > "$WORKSPACE_DIR/SOUL.md" << 'SOUL'
+# Agent Identity
 
-# ── Clear stale PID ───────────────────────────────────────────────────
-rm -f "$CONFIG_DIR/gateway.pid" 2>/dev/null || true
+You are a direct, technically capable personal assistant.
 
-# ── Detect Railway URL/Webhook ────────────────────────────────────────
+## Non-negotiable behaviors
+- No filler phrases ("Great question!", "Certainly!", "Of course!")
+- No repeating the user's question back before answering
+- No unsolicited disclaimers or "consult a professional" unless genuinely critical
+- No emojis unless the user uses them first
+- Technical depth by default — do not dumb things down
+
+## Response style
+- Short answers for short questions
+- Structured answers only when structure genuinely helps
+- If you don't know something, say so directly
+
+## Model awareness
+- You have access to multiple AI providers via automatic failover
+- Never mention provider names, model names, or routing decisions to the user
+- If something fails internally, retry silently — do not surface infrastructure noise
+SOUL
+
+# ── Create Smart Router Skill ──────────────────────────────────────────
+cat > "$WORKSPACE_DIR/skills/smart-router/SKILL.md" << 'SKILL'
+---
+name: smart-router
+description: Routes messages to the optimal AI model based on task complexity
+user-invocable: false
+---
+
+# Smart Model Router
+
+You are a personal AI assistant with access to multiple AI models via fallback configuration. Follow these routing rules on every message:
+
+## Complexity Classification
+
+**Simple (use current model as-is, keep response short):**
+- Greetings, one-word answers, yes/no questions
+- Single definitions or translations
+- Messages under 10 words with no technical content
+
+**Medium (standard response):**
+- Explanations, summaries, general questions
+- Light coding help, simple analysis
+- Most everyday messages
+
+**Complex (use /think high before responding):**
+- Multi-step debugging or code architecture
+- Deep research or comparison tasks
+- Messages explicitly asking to "think through", "analyze deeply", or "reason about"
+- Any message over 60 words with technical content
+
+## Token Conservation Rules
+
+- Never repeat back what the user said before answering
+- For Simple tasks: respond in under 3 sentences
+- For Complex tasks: plan before executing — state goal, list steps, then act
+- If a tool output exceeds 30 lines, summarize it and offer to show full output on request
+
+## Provider Status
+
+If you receive a rate limit error, it is handled automatically — do not mention it to the user. Just respond normally on the next attempt.
+SKILL
+
+# ── Create Status Command Skill ───────────────────────────────────────
+cat > "$WORKSPACE_DIR/skills/status-command/SKILL.md" << 'SKILL'
+---
+name: status-command
+description: Shows current model, fallback chain, and session info when user sends /status
+user-invocable: true
+---
+
+When the user sends /status, respond with:
+1. Current primary model in use this session
+2. Configured fallback chain in order
+3. Current session token count if available
+4. A one-line summary of today's usage if memory is available
+
+Format it compactly. No headers. Plain text.
+SKILL
+
+# ── Detect Webhook / Origins ──────────────────────────────────────────
 WEBHOOK_CONFIG=""
-WEBHOOK_SECRET=""
 if [ -n "${RAILWAY_STATIC_URL:-}" ]; then
   TELEGRAM_WEBHOOK_URL="https://${RAILWAY_STATIC_URL}/telegram/webhook"
-  WEBHOOK_SECRET=$(openssl rand -hex 16)
-  echo "[bootstrap] Railway URL: $RAILWAY_STATIC_URL"
-  WEBHOOK_CONFIG="\"webhookUrl\": \"${TELEGRAM_WEBHOOK_URL}\", \"webhookSecret\": \"${WEBHOOK_SECRET}\","
+  WEBHOOK_CONFIG="\"webhookUrl\": \"${TELEGRAM_WEBHOOK_URL}\","
 fi
 
-# ── Setup Allowed Origins ─────────────────────────────────────────────
 if [ -n "${RAILWAY_STATIC_URL:-}" ]; then
   ALLOWED_ORIGINS="[\"https://${RAILWAY_STATIC_URL}\", \"http://localhost:18789\"]"
 else
   ALLOWED_ORIGINS="[\"*\"]"
 fi
 
-PRIMARY_MODEL="${OPENCLAW_MODEL:-google/gemini-2.5-flash}"
-
-# ── Port configuration ────────────────────────────────────────────────
-if [ -n "${PORT:-}" ] && [ "$PORT" -eq "$PORT" ] 2>/dev/null; then
-  GATEWAY_PORT=$PORT
-else
-  GATEWAY_PORT=18789
-fi
-
-# ── Write openclaw.json (v2026 schema compliant) ───────────────────────
+# ── Write openclaw.json (Native Failover Config) ──────────────────────
 cat > "$CONFIG_FILE" << EOCONFIG
 {
-  "agents": {
-    "defaults": {
-      "model": "${PRIMARY_MODEL}",
-      "workspace": "${WORKSPACE_DIR}",
-      "sandbox": { "mode": "off" },
-      "heartbeat": { "directPolicy": "block" }
+  "agent": {
+    "model": {
+      "primary": "groq/llama-3.1-8b-instant",
+      "fallbacks": [
+        "openrouter/google/gemini-2.5-flash",
+        "openrouter/meta-llama/llama-3.3-70b:free",
+        "openrouter/deepseek/deepseek-r1:free",
+        "openrouter/google/gemini-2.5-pro-exp:free"
+      ]
     }
   },
   "channels": {
     "telegram": {
       "botToken": "${TELEGRAM_BOT_TOKEN:-}",
-      "allowFrom": [$(if [ -n "$TELEGRAM_ALLOWED_USER_ID" ]; then echo "\"$TELEGRAM_ALLOWED_USER_ID\""; fi)],
+      "allowFrom": ["${TELEGRAM_ALLOWED_USER_ID:-}"],
       ${WEBHOOK_CONFIG}
       "groups": {}
     }
   },
   "gateway": {
-    "mode": "local",
-    "bind": "lan",
-    "port": ${GATEWAY_PORT},
-    "controlUi": {
-      "enabled": true,
-      "allowedOrigins": ${ALLOWED_ORIGINS},
-      "dangerouslyAllowHostHeaderOriginFallback": true
-    },
+    "bind": "0.0.0.0",
+    "port": ${PORT:-8080},
     "auth": {
       "mode": "token",
       "token": "${OPENCLAW_GATEWAY_TOKEN:-}"
     },
-    "trustedProxies": ["100.64.0.0/10", "10.0.0.0/8"]
-  }
+    "trustedProxies": ["100.64.0.0/10", "10.0.0.0/8"],
+    "allowedOrigins": ${ALLOWED_ORIGINS}
+  },
+  "agents": {
+    "defaults": {
+      "sandbox": { "mode": "off" },
+      "heartbeat": { "directPolicy": "block" },
+      "workspace": "${WORKSPACE_DIR}"
+    }
+  },
+  "memory": { "flush": true }
 }
 EOCONFIG
 
-chmod 600 "$CONFIG_FILE" 2>/dev/null || true
-echo "[bootstrap] ✅ openclaw.json generated at $CONFIG_FILE"
+echo "[bootstrap] ✅ openclaw.json generated with native failover."
 
 # ── Start Gateway ─────────────────────────────────────────────────────
-# Pass config path explicitly so openclaw doesn't fall back to default lookup.
-# Using --bind lan as it's the correct enum value for the CLI.
-# Export variables to ensure openclaw finds the config
 export OPENCLAW_STATE_DIR="$CONFIG_DIR"
-export OPENCLAW_CONFIG_PATH="$CONFIG_FILE"
-
-# Increase memory limit to fit within Railway's 512MB plan
-# 400MB is the user-requested limit for the 512MB free tier.
-export NODE_OPTIONS="--max-old-space-size=400"
-
-echo "[bootstrap] ✅ Starting gateway on port ${PORT:-8080}..."
-
-# Start the gateway
-# Use node directly with full path to ensure it's found regardless of PATH setup.
 export OPENCLAW_SKIP_DOCTOR=1
 export OPENCLAW_NO_RESPAWN=1
-echo "[bootstrap] 🎬 Executing gateway..."
-exec node /app/openclaw.mjs gateway run \
-  --bind lan \
-  --port "${PORT:-18789}" \
-  --allow-unconfigured
+
+echo "[bootstrap] 🎬 Executing gateway via global openclaw command..."
+exec openclaw gateway run --allow-unconfigured
