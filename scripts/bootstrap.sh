@@ -61,12 +61,7 @@ touch "$WORKSPACE_DIR/memory/healthcheck.md" 2>/dev/null || true
 # ── GW-02: Clear stale PID from previous crash ────────────────────────
 rm -f "$CONFIG_DIR/gateway.pid" 2>/dev/null || true
 
-# ── Skip config generation if already configured ──────────────────────
-if [ -f "$CONFIG_FILE" ]; then
-  echo "[bootstrap] Config already exists — skipping generation."
-  echo "[bootstrap] Delete $CONFIG_FILE to force regeneration."
-  exec "$@"
-fi
+# ── Always regenerate config on Railway to capture env changes ────────
 
 echo "[bootstrap] Generating fresh openclaw.json from environment..."
 
