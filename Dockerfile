@@ -2,7 +2,9 @@ FROM node:22-bookworm-slim
 
 WORKDIR /app
 
-RUN npm install -g openclaw@latest
+# Use pnpm for global install as it's more memory efficient
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm add -g openclaw@latest
 
 ENV NODE_OPTIONS="--max-old-space-size=350"
 
