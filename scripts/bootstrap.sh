@@ -118,6 +118,9 @@ echo "[bootstrap] ✅ openclaw.json generated at $CONFIG_FILE"
 export OPENCLAW_STATE_DIR="$CONFIG_DIR"
 export OPENCLAW_CONFIG_PATH="$CONFIG_FILE"
 
+# Increase memory limit to fit within Railway's 512MB plan
+export NODE_OPTIONS="--max-old-space-size=384"
+
 echo "[bootstrap] ✅ Starting gateway on port ${PORT:-8080}..."
 
 # Start the gateway
