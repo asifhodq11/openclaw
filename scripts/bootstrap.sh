@@ -30,13 +30,20 @@ if ! mkdir -p "$CONFIG_DIR" 2>/dev/null; then
   
   mkdir -p "$CONFIG_DIR"
   mkdir -p "$WORKSPACE_DIR"
+  mkdir -p "$WORKSPACE_DIR/memory"
+  mkdir -p "$WORKSPACE_DIR/skills"
+  mkdir -p "$CONFIG_DIR/logs"
+  mkdir -p "$CONFIG_DIR/credentials"
+  mkdir -p "$CONFIG_DIR/smart-router"
+else
+  # Success creating the main directory, create the subdirectories safely.
+  mkdir -p "$WORKSPACE_DIR"
+  mkdir -p "$WORKSPACE_DIR/memory"
+  mkdir -p "$WORKSPACE_DIR/skills"
+  mkdir -p "$CONFIG_DIR/logs"
+  mkdir -p "$CONFIG_DIR/credentials"
+  mkdir -p "$CONFIG_DIR/smart-router"
 fi
-
-mkdir -p "$WORKSPACE_DIR/memory"
-mkdir -p "$WORKSPACE_DIR/skills"
-mkdir -p "$CONFIG_DIR/logs"
-mkdir -p "$CONFIG_DIR/credentials"
-mkdir -p "$CONFIG_DIR/smart-router"
 
 # ── Touch required files that gateway expects to exist ────────────────
 touch "$WORKSPACE_DIR/MEMORY.md"       2>/dev/null || true
