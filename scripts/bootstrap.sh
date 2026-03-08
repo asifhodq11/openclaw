@@ -15,8 +15,23 @@ echo "[bootstrap] OpenClaw Railway Edition starting..."
 echo "[bootstrap] Config dir: $CONFIG_DIR"
 
 # ── Create all required directories ───────────────────────────────────
-mkdir -p "$CONFIG_DIR"
-mkdir -p "$WORKSPACE_DIR"
+# Railway explicitly mounts volumes as root. We must verify if the node user
+# can write to the directory. If it fails, we dump debug info.
+if ! mkdir -p "$CONFIG_DIR" 2>/dev/null; then
+  echo "[bootstrap] FATAL: Cannot create $CONFIG_DIR. Permission denied."
+  echo "[bootstrap] Debug info: Running as $(id)"
+  echo "[bootstrap] Directory stats for /data:"
+  ls -la /data || true
+  
+  echo "[bootstrap] Attempting fallback to /tmp/.openclaw for ephemeral run..."
+  CONFIG_DIR="/tmp/.openclaw"
+  CONFIG_FILE="$CONFIG_DIR/openclaw.json"
+  WORKSPACE_DIR="/tmp/workspace"
+  
+  mkdir -p "$CONFIG_DIR"
+  mkdir -p "$WORKSPACE_DIR"
+fi
+
 mkdir -p "$WORKSPACE_DIR/memory"
 mkdir -p "$WORKSPACE_DIR/skills"
 mkdir -p "$CONFIG_DIR/logs"

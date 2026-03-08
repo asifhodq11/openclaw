@@ -13,7 +13,7 @@ Follow these 5 steps to deploy OpenClaw Railway Edition. No setup wizard, just e
    - Make sure to set `OPENCLAW_GATEWAY_TOKEN` to a secure string.
 4. **Add Persistent Storage:**
    - Go to the **Volumes** tab in your service.
-   - Add a 1GB volume and mount it exactly at `/data`.
+   - Add a volume and mount it exactly at `/app/data` (not `/data` to avoid root mount permission issues).
    - *This ensures your history and Smart Router state survives redeploys.*
 5. **Verify the Deployment:**
    - Watch the deploy logs for: `[gateway] listening on 0.0.0.0`
