@@ -1,4 +1,4 @@
-import HOST_ENV_SECURITY_POLICY_JSON from "./host-env-security-policy.json" with { type: "json" };
+import HOST_ENV_SECURITY_POLICY_JSON from "./host-env-security-policy-stub.js";
 
 const PORTABLE_ENV_VAR_KEY = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
