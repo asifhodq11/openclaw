@@ -95,8 +95,17 @@ fi
 # ── Write openclaw.json ── ONLY valid upstream schema keys ────────────
 cat > "$CONFIG_FILE" << EOCONFIG
 {
-  "agent": {
-    "model": "${PRIMARY_MODEL}"
+  "agents": {
+    "defaults": {
+      "model": "${PRIMARY_MODEL}",
+      "workspace": "${WORKSPACE_DIR}",
+      "sandbox": {
+        "mode": "off"
+      },
+      "heartbeat": {
+        "directPolicy": "block"
+      }
+    }
   },
   "channels": {
     "telegram": {
@@ -120,17 +129,6 @@ cat > "$CONFIG_FILE" << EOCONFIG
       "token": "${OPENCLAW_GATEWAY_TOKEN:-}"
     },
     "trustedProxies": ["100.64.0.0/10", "10.0.0.0/8"]
-  },
-  "agents": {
-    "defaults": {
-      "sandbox": {
-        "mode": "off"
-      },
-      "heartbeat": {
-        "directPolicy": "block"
-      },
-      "workspace": "${WORKSPACE_DIR}"
-    }
   },
   "memory": {
     "flush": true
