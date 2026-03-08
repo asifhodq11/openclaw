@@ -130,6 +130,6 @@ echo "[bootstrap] ✅ Starting gateway on port ${PORT:-8080}..."
 export OPENCLAW_SKIP_DOCTOR=1
 echo "[bootstrap] 🎬 Executing gateway..."
 exec node /app/openclaw.mjs gateway run \
-  --bind 0.0.0.0 \
+  --bind lan \
   --port "${PORT:-18789}" \
   --allow-unconfigured
