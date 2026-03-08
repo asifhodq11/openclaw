@@ -3,7 +3,7 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "sh /app/scripts/bootstrap.sh openclaw gateway --bind 0.0.0.0 --port $PORT"
+startCommand = "sh /app/scripts/bootstrap.sh openclaw gateway --bind 0.0.0.0"
 healthcheckPath = "/healthz"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

@@ -90,6 +90,13 @@ fi
 
 PRIMARY_MODEL="${OPENCLAW_MODEL:-google/gemini-2.5-flash}"
 
+# ── Ensure PORT is strictly numeric to avoid JSON parsing errors ────────
+if [ -n "${PORT:-}" ] && [ "$PORT" -eq "$PORT" ] 2>/dev/null; then
+  GATEWAY_PORT=$PORT
+else
+  GATEWAY_PORT=18789
+fi
+
 # ── Write openclaw.json ── ONLY valid upstream schema keys ────────────
 cat > "$CONFIG_FILE" << EOCONFIG
 {
@@ -106,7 +113,7 @@ cat > "$CONFIG_FILE" << EOCONFIG
   },
   "gateway": {
     "bind": "0.0.0.0",
-    "port": ${PORT:-18789},
+    "port": ${GATEWAY_PORT},
     "auth": {
       "mode": "token",
       "token": "${OPENCLAW_GATEWAY_TOKEN:-}"
