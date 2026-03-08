@@ -26,7 +26,14 @@ mkdir -p "$CONFIG_DIR/smart-router"
 # ── Touch required files that gateway expects to exist ────────────────
 touch "$WORKSPACE_DIR/MEMORY.md"       2>/dev/null || true
 touch "$WORKSPACE_DIR/AGENTS.md"       2>/dev/null || true
-touch "$WORKSPACE_DIR/SOUL.md"         2>/dev/null || true
+
+# Install SOUL.md if we included one in the repo root
+if [ -f "/app/SOUL.md" ]; then
+  cp "/app/SOUL.md" "$WORKSPACE_DIR/SOUL.md"
+else
+  touch "$WORKSPACE_DIR/SOUL.md" 2>/dev/null || true
+fi
+
 touch "$WORKSPACE_DIR/memory/healthcheck.md" 2>/dev/null || true
 
 # ── GW-02: Clear stale PID from previous crash ────────────────────────
