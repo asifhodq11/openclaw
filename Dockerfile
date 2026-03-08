@@ -37,9 +37,8 @@ RUN mkdir -p /out && \
 # ── Stage 2: Build ──────────────────────────────────────────────
 FROM ${OPENCLAW_NODE_BOOKWORM_IMAGE} AS build
 
-# Install Bun (required for build scripts)
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:${PATH}"
+# Railway Edition: Bun removed — only needed for A2UI canvas bundle (deleted)
+# This cuts Docker build time by ~2 minutes and removes a moving-target dependency
 
 RUN corepack enable
 
@@ -52,23 +51,15 @@ COPY scripts ./scripts
 
 COPY --from=ext-deps /out/ ./extensions/
 
-# Reduce OOM risk on low-memory hosts during dependency installation.
-# Docker builds on small VMs may otherwise fail with "Killed" (exit 137).
-RUN NODE_OPTIONS=--max-old-space-size=2048 pnpm install --frozen-lockfile
+# Railway Edition: Reduced from 2048MB to 768MB — safe after removing A2UI/native apps
+RUN NODE_OPTIONS=--max-old-space-size=768 pnpm install --frozen-lockfile
 
 COPY . .
 
-# A2UI bundle may fail under QEMU cross-compilation (e.g. building amd64
-# on Apple Silicon). CI builds natively per-arch so this is a no-op there.
-# Stub it so local cross-arch builds still succeed.
-RUN pnpm canvas:a2ui:bundle || \
-    (echo "A2UI bundle: creating stub (non-fatal)" && \
-     mkdir -p src/canvas-host/a2ui && \
-     echo "/* A2UI bundle unavailable in this build */" > src/canvas-host/a2ui/a2ui.bundle.js && \
-     echo "stub" > src/canvas-host/a2ui/.bundle.hash && \
-     rm -rf vendor/a2ui apps/shared/OpenClawKit/Tools/CanvasA2UI)
+# Railway Edition: A2UI canvas bundle removed (deleted vendor/a2ui entirely)
+# This was the primary build bottleneck (~3-5 min) and OOM cause on Railway
 RUN pnpm build
-# Force pnpm for UI build (Bun may fail on ARM/Synology architectures)
+# Force pnpm for UI build
 ENV OPENCLAW_PREFER_PNPM=1
 RUN pnpm ui:build
 
@@ -117,6 +108,9 @@ COPY --from=build --chown=node:node /app/openclaw.mjs .
 COPY --from=build --chown=node:node /app/extensions ./extensions
 COPY --from=build --chown=node:node /app/skills ./skills
 COPY --from=build --chown=node:node /app/docs ./docs
+# Railway Edition: copy bootstrap + utility scripts into runtime image
+COPY --from=build --chown=node:node /app/scripts ./scripts
+RUN chmod +x /app/scripts/bootstrap.sh
 
 # Docker live-test runners invoke `pnpm` inside the runtime image.
 # Activate the exact pinned package manager now so the container does not
