@@ -119,10 +119,8 @@ export OPENCLAW_STATE_DIR="$CONFIG_DIR"
 export OPENCLAW_CONFIG_PATH="$CONFIG_FILE"
 
 # Increase memory limit to fit within Railway's 512MB plan
-# 300MB is a robust middle ground for 512MB containers:
-# It's high enough to handle the gateway's plugin-heavy startup,
-# but leaves ~180MB (plus shared libs) for system/native headroom.
-export NODE_OPTIONS="--max-old-space-size=300"
+# Use optimization flags to reduce memory footprint during high-allocation startup.
+export NODE_OPTIONS="--max-old-space-size=256 --optimize-for-size --max-semi-space-size=16"
 
 echo "[bootstrap] ✅ Starting gateway on port ${PORT:-8080}..."
 
