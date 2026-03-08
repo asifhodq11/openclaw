@@ -107,14 +107,19 @@ cat > "$CONFIG_FILE" << EOCONFIG
     }
   },
   "gateway": {
-    "bind": "0.0.0.0",
+    "mode": "local",
+    "bind": "lan",
     "port": ${GATEWAY_PORT},
+    "controlUi": {
+      "enabled": true,
+      "allowedOrigins": ${ALLOWED_ORIGINS},
+      "dangerouslyAllowHostHeaderOriginFallback": true
+    },
     "auth": {
       "mode": "token",
       "token": "${OPENCLAW_GATEWAY_TOKEN:-}"
     },
-    "trustedProxies": ["100.64.0.0/10", "10.0.0.0/8"],
-    "allowedOrigins": ${ALLOWED_ORIGINS}
+    "trustedProxies": ["100.64.0.0/10", "10.0.0.0/8"]
   },
   "agents": {
     "defaults": {
