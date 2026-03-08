@@ -127,9 +127,9 @@ echo "[bootstrap] ✅ Starting gateway on port ${PORT:-8080}..."
 
 # Start the gateway
 # Use node directly with full path to ensure it's found regardless of PATH setup.
+export OPENCLAW_SKIP_DOCTOR=1
 echo "[bootstrap] 🎬 Executing gateway..."
 exec node /app/openclaw.mjs gateway run \
   --bind 0.0.0.0 \
   --port "${PORT:-18789}" \
-  --allow-unconfigured \
-  --no-doctor
+  --allow-unconfigured
