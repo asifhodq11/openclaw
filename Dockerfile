@@ -1,12 +1,12 @@
-FROM node:22-bookworm-slim
+FROM node:22-bookworm
 
 WORKDIR /app
 
-# Use pnpm for global install as it's more memory efficient
-RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN pnpm add -g openclaw@latest
+# Local install is often more stable in constrained build environments
+RUN npm install openclaw@latest --omit=dev --no-audit --no-fund
 
 ENV NODE_OPTIONS="--max-old-space-size=350"
+ENV PATH="/app/node_modules/.bin:$PATH"
 
 COPY scripts/ ./scripts/
 RUN chmod +x ./scripts/bootstrap.sh
