@@ -1,4 +1,4 @@
-import SHARED_TOOL_DISPLAY_JSON from "./tool-display.json" with { type: "json" };
+import SHARED_TOOL_DISPLAY_JSON from "./tool-display-stub.js";
 import { redactToolDetail } from "../logging/redact.js";
 import { shortenHomeInString } from "../utils.js";
 import {
