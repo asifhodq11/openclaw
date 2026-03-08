@@ -67,11 +67,13 @@ echo "[bootstrap] Generating fresh openclaw.json from environment..."
 
 # ── Detect Railway URL for webhook mode (fixes Flaw A-03) ─────────────
 WEBHOOK_CONFIG=""
+WEBHOOK_SECRET=""
 if [ -n "${RAILWAY_STATIC_URL:-}" ]; then
   TELEGRAM_WEBHOOK_URL="https://${RAILWAY_STATIC_URL}/telegram/webhook"
+  WEBHOOK_SECRET=$(openssl rand -hex 16)
   echo "[bootstrap] Railway URL detected: $RAILWAY_STATIC_URL"
   echo "[bootstrap] Configuring Telegram webhook mode: $TELEGRAM_WEBHOOK_URL"
-  WEBHOOK_CONFIG="\"webhookUrl\": \"${TELEGRAM_WEBHOOK_URL}\","
+  WEBHOOK_CONFIG="\"webhookUrl\": \"${TELEGRAM_WEBHOOK_URL}\", \"webhookSecret\": \"${WEBHOOK_SECRET}\","
 else
   echo "[bootstrap] No RAILWAY_STATIC_URL — using long-polling mode"
 fi
@@ -129,9 +131,6 @@ cat > "$CONFIG_FILE" << EOCONFIG
       "token": "${OPENCLAW_GATEWAY_TOKEN:-}"
     },
     "trustedProxies": ["100.64.0.0/10", "10.0.0.0/8"]
-  },
-  "memory": {
-    "flush": true
   }
 }
 EOCONFIG
