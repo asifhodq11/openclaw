@@ -19,7 +19,6 @@ const entrypoints = [
   "line",
   "msteams",
   "acpx",
-  "bluebubbles",
   "copilot-proxy",
   "device-pair",
   "diagnostics-otel",
