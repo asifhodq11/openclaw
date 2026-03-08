@@ -2,8 +2,6 @@
 # ═══════════════════════════════════════════════════════════════════════
 #  OpenClaw Railway Edition — bootstrap.sh
 #  Generates openclaw.json from env vars before first boot.
-#  Fixes: D-01, D-02, D-06, D-07, GT-01, GT-03, SB-01, SB-02, GW-02,
-#         M-02, M-03, WS-03, SEC-01
 # ═══════════════════════════════════════════════════════════════════════
 set -e
 
@@ -12,73 +10,52 @@ CONFIG_FILE="$CONFIG_DIR/openclaw.json"
 WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-$CONFIG_DIR/workspace}"
 
 echo "[bootstrap] OpenClaw Railway Edition starting..."
+
+# ── Fix Railway volume ownership ──────────────────────────────────────
+# Volume mounts as root:root drwxr-xr-x. Node user cannot write.
+if [ -d "/data" ] && [ ! -w "/data" ]; then
+  echo "[bootstrap] WARNING: /data not writable by uid=$(id -u). Attempting chown..."
+  chown -R "$(id -u):$(id -g)" /data 2>/dev/null || true
+  
+  if [ ! -w "/data" ]; then
+    echo "[bootstrap] /data still not writable — falling back to /home/node/.openclaw"
+    CONFIG_DIR="/home/node/.openclaw"
+    CONFIG_FILE="$CONFIG_DIR/openclaw.json"
+    WORKSPACE_DIR="/home/node/workspace"
+  fi
+fi
+
 echo "[bootstrap] Config dir: $CONFIG_DIR"
 
 # ── Create all required directories ───────────────────────────────────
-# Railway explicitly mounts volumes as root. We must verify if the node user
-# can write to the directory. If it fails, we dump debug info.
-if ! mkdir -p "$CONFIG_DIR" 2>/dev/null; then
-  echo "[bootstrap] FATAL: Cannot create $CONFIG_DIR. Permission denied."
-  echo "[bootstrap] Debug info: Running as $(id)"
-  echo "[bootstrap] Directory stats for /data:"
-  ls -la /data || true
-  
-  echo "[bootstrap] Attempting fallback to /tmp/.openclaw for ephemeral run..."
-  CONFIG_DIR="/tmp/.openclaw"
-  CONFIG_FILE="$CONFIG_DIR/openclaw.json"
-  WORKSPACE_DIR="/tmp/workspace"
-  
-  mkdir -p "$CONFIG_DIR"
-  mkdir -p "$WORKSPACE_DIR"
-  mkdir -p "$WORKSPACE_DIR/memory"
-  mkdir -p "$WORKSPACE_DIR/skills"
-  mkdir -p "$CONFIG_DIR/logs"
-  mkdir -p "$CONFIG_DIR/credentials"
-  mkdir -p "$CONFIG_DIR/smart-router"
-else
-  # Success creating the main directory, create the subdirectories safely.
-  mkdir -p "$WORKSPACE_DIR"
-  mkdir -p "$WORKSPACE_DIR/memory"
-  mkdir -p "$WORKSPACE_DIR/skills"
-  mkdir -p "$CONFIG_DIR/logs"
-  mkdir -p "$CONFIG_DIR/credentials"
-  mkdir -p "$CONFIG_DIR/smart-router"
-fi
+mkdir -p "$CONFIG_DIR"
+mkdir -p "$WORKSPACE_DIR"
+mkdir -p "$WORKSPACE_DIR/memory"
+mkdir -p "$WORKSPACE_DIR/skills"
+mkdir -p "$CONFIG_DIR/logs"
+mkdir -p "$CONFIG_DIR/credentials"
+mkdir -p "$CONFIG_DIR/smart-router"
 
-# ── Touch required files that gateway expects to exist ────────────────
+# ── Touch required files ──────────────────────────────────────────────
 touch "$WORKSPACE_DIR/MEMORY.md"       2>/dev/null || true
 touch "$WORKSPACE_DIR/AGENTS.md"       2>/dev/null || true
-
-# Install SOUL.md if we included one in the repo root
-if [ -f "/app/SOUL.md" ]; then
-  cp "/app/SOUL.md" "$WORKSPACE_DIR/SOUL.md"
-else
-  touch "$WORKSPACE_DIR/SOUL.md" 2>/dev/null || true
-fi
-
+if [ -f "/app/SOUL.md" ]; then cp "/app/SOUL.md" "$WORKSPACE_DIR/SOUL.md"; else touch "$WORKSPACE_DIR/SOUL.md" 2>/dev/null || true; fi
 touch "$WORKSPACE_DIR/memory/healthcheck.md" 2>/dev/null || true
 
-# ── GW-02: Clear stale PID from previous crash ────────────────────────
+# ── Clear stale PID ───────────────────────────────────────────────────
 rm -f "$CONFIG_DIR/gateway.pid" 2>/dev/null || true
 
-# ── Always regenerate config on Railway to capture env changes ────────
-
-echo "[bootstrap] Generating fresh openclaw.json from environment..."
-
-# ── Detect Railway URL for webhook mode (fixes Flaw A-03) ─────────────
+# ── Detect Railway URL/Webhook ────────────────────────────────────────
 WEBHOOK_CONFIG=""
 WEBHOOK_SECRET=""
 if [ -n "${RAILWAY_STATIC_URL:-}" ]; then
   TELEGRAM_WEBHOOK_URL="https://${RAILWAY_STATIC_URL}/telegram/webhook"
   WEBHOOK_SECRET=$(openssl rand -hex 16)
-  echo "[bootstrap] Railway URL detected: $RAILWAY_STATIC_URL"
-  echo "[bootstrap] Configuring Telegram webhook mode: $TELEGRAM_WEBHOOK_URL"
+  echo "[bootstrap] Railway URL: $RAILWAY_STATIC_URL"
   WEBHOOK_CONFIG="\"webhookUrl\": \"${TELEGRAM_WEBHOOK_URL}\", \"webhookSecret\": \"${WEBHOOK_SECRET}\","
-else
-  echo "[bootstrap] No RAILWAY_STATIC_URL — using long-polling mode"
 fi
 
-# ── Set allowedOrigins from Railway URL (fixes Flaw D-06) ─────────────
+# ── Setup Allowed Origins ─────────────────────────────────────────────
 if [ -n "${RAILWAY_STATIC_URL:-}" ]; then
   ALLOWED_ORIGINS="[\"https://${RAILWAY_STATIC_URL}\", \"http://localhost:18789\"]"
 else
@@ -87,26 +64,22 @@ fi
 
 PRIMARY_MODEL="${OPENCLAW_MODEL:-google/gemini-2.5-flash}"
 
-# ── Ensure PORT is strictly numeric to avoid JSON parsing errors ────────
+# ── Port configuration ────────────────────────────────────────────────
 if [ -n "${PORT:-}" ] && [ "$PORT" -eq "$PORT" ] 2>/dev/null; then
   GATEWAY_PORT=$PORT
 else
   GATEWAY_PORT=18789
 fi
 
-# ── Write openclaw.json ── ONLY valid upstream schema keys ────────────
+# ── Write openclaw.json (v2026 schema compliant) ───────────────────────
 cat > "$CONFIG_FILE" << EOCONFIG
 {
   "agents": {
     "defaults": {
       "model": "${PRIMARY_MODEL}",
       "workspace": "${WORKSPACE_DIR}",
-      "sandbox": {
-        "mode": "off"
-      },
-      "heartbeat": {
-        "directPolicy": "block"
-      }
+      "sandbox": { "mode": "off" },
+      "heartbeat": { "directPolicy": "block" }
     }
   },
   "channels": {
@@ -135,15 +108,18 @@ cat > "$CONFIG_FILE" << EOCONFIG
 }
 EOCONFIG
 
-# ── Secure the config file ────────────────────────────────────────────
 chmod 600 "$CONFIG_FILE" 2>/dev/null || true
-
 echo "[bootstrap] ✅ openclaw.json generated at $CONFIG_FILE"
-echo "[bootstrap] ✅ Memory directories initialized"
-echo "[bootstrap] ✅ Sandbox disabled (no Docker on Railway)"
-echo "[bootstrap] ✅ Trusted proxies set for Railway CIDR"
-echo "[bootstrap] ✅ Starting gateway on port ${PORT:-18789}..."
 
-# Propagate the resolved $CONFIG_DIR to the CLI so it finds the generated config (e.g. if we used /tmp/.openclaw)
+# ── Start Gateway ─────────────────────────────────────────────────────
+# Pass config path explicitly so openclaw doesn't fall back to default lookup.
+# Using --bind lan as it's the correct enum value for the CLI.
 export OPENCLAW_STATE_DIR="$CONFIG_DIR"
-exec "$@"
+export OPENCLAW_WORKSPACE_DIR="$WORKSPACE_DIR"
+
+echo "[bootstrap] ✅ Starting gateway on port $GATEWAY_PORT..."
+exec openclaw gateway \
+  --bind lan \
+  --port "$GATEWAY_PORT" \
+  --config "$CONFIG_FILE" \
+  --allow-unconfigured
