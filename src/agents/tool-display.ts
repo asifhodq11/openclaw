@@ -9,7 +9,7 @@ import {
   resolveToolVerbAndDetailForArgs,
   type ToolDisplaySpec as ToolDisplaySpecBase,
 } from "./tool-display-common.js";
-import TOOL_DISPLAY_OVERRIDES_JSON from "./tool-display-overrides.json" with { type: "json" };
+import TOOL_DISPLAY_OVERRIDES_JSON from "./tool-display-overrides-stub.js";
 
 type ToolDisplaySpec = ToolDisplaySpecBase & {
   emoji?: string;
