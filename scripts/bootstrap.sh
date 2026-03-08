@@ -142,4 +142,6 @@ echo "[bootstrap] ✅ Sandbox disabled (no Docker on Railway)"
 echo "[bootstrap] ✅ Trusted proxies set for Railway CIDR"
 echo "[bootstrap] ✅ Starting gateway on port ${PORT:-18789}..."
 
+# Propagate the resolved $CONFIG_DIR to the CLI so it finds the generated config (e.g. if we used /tmp/.openclaw)
+export OPENCLAW_STATE_DIR="$CONFIG_DIR"
 exec "$@"
