@@ -1,0 +1,36 @@
+{
+  "tiers": {
+    "simple": {
+      "maxWords": 40,
+      "signals": ["hi", "hello", "thanks", "what is", "translate", "define",
+                  "how do i", "quick", "brief", "tldr", "hey", "ok", "yes", "no"]
+    },
+    "complex": {
+      "minWords": 41,
+      "signals": ["debug", "program", "algorithm", "analyze", "research",
+                  "compare", "explain in detail", "reason", "think through",
+                  "implement", "refactor", "optimize", "architecture"]
+    }
+  },
+  "providers": {
+    "tier1": [
+      { "name": "groq",       "model": "llama-3.1-8b-instant",           "dailyLimit": 14400 },
+      { "name": "gemini",     "model": "gemini-2.0-flash-lite",           "dailyLimit": 500   },
+      { "name": "mistral",    "model": "mistral-7b-instruct-v0.3:free",   "dailyLimit": 100   },
+      { "name": "openrouter", "model": "google/gemma-3-27b-it:free",      "dailyLimit": 50    }
+    ],
+    "tier2": [
+      { "name": "gemini",     "model": "gemini-2.5-flash",                "dailyLimit": 500   },
+      { "name": "groq",       "model": "llama-3.3-70b-versatile",         "dailyLimit": 7200  },
+      { "name": "cerebras",   "model": "llama-3.3-70b",                   "dailyLimit": 1800  },
+      { "name": "mistral",    "model": "mistral-small-3.1-24b:free",      "dailyLimit": 100   },
+      { "name": "openrouter", "model": "meta-llama/llama-3.3-70b:free",   "dailyLimit": 50    }
+    ],
+    "tier3": [
+      { "name": "gemini",     "model": "gemini-2.5-pro-exp",              "dailyLimit": 25    },
+      { "name": "openrouter", "model": "deepseek/deepseek-r1:free",       "dailyLimit": 50    },
+      { "name": "groq",       "model": "llama-3.3-70b-versatile",         "dailyLimit": 7200  },
+      { "name": "openrouter", "model": "openrouter/auto",                 "dailyLimit": 50    }
+    ]
+  }
+}
