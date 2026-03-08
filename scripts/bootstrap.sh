@@ -114,12 +114,13 @@ echo "[bootstrap] ✅ openclaw.json generated at $CONFIG_FILE"
 # ── Start Gateway ─────────────────────────────────────────────────────
 # Pass config path explicitly so openclaw doesn't fall back to default lookup.
 # Using --bind lan as it's the correct enum value for the CLI.
+# Export variables to ensure openclaw finds the config
 export OPENCLAW_STATE_DIR="$CONFIG_DIR"
-export OPENCLAW_WORKSPACE_DIR="$WORKSPACE_DIR"
+export OPENCLAW_CONFIG_PATH="$CONFIG_FILE"
 
-echo "[bootstrap] ✅ Starting gateway on port $GATEWAY_PORT..."
-exec openclaw gateway \
-  --bind lan \
-  --port "$GATEWAY_PORT" \
-  --config "$CONFIG_FILE" \
-  --allow-unconfigured
+echo "[bootstrap] ✅ Starting gateway on port ${PORT:-8080}..."
+
+# Start the gateway
+# We remove --config as it's not a valid CLI flag for 'gateway run'
+# We rely on OPENCLAW_CONFIG_PATH and OPENCLAW_STATE_DIR instead.
+exec openclaw gateway run --allow-unconfigured
