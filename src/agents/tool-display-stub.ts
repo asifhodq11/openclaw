@@ -1,7 +1,0 @@
-export default {
-  "version": 1,
-  "fallback": {
-    "emoji": "🧩"
-  },
-  "tools": {}
-};
