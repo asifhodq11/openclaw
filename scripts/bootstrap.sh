@@ -4,16 +4,20 @@ set -e
 echo "[bootstrap] OpenClaw Railway Edition starting..."
 
 # ── Runtime Installation ──────────────────────────────────────────────
-# We do this at runtime because build-time npm install of openclaw exceeds 
-# Railway's build-time memory limits (exit code 254).
+export PATH="/app/node_modules/.bin:$PATH"
+
 if [ ! -f "/app/node_modules/.bin/openclaw" ]; then
-  echo "[bootstrap] ⚙️ Installing openclaw at runtime (first boot only)..."
-  # Use a higher memory limit just for the install
-  NODE_OPTIONS="--max-old-space-size=450" npm install openclaw@latest --omit=dev --no-audit --no-fund
+  echo "[bootstrap] ⚙️ Installing openclaw at runtime..."
+  # Use flags to minimize disk IO and memory usage
+  # --no-package-lock prevents writing to the root dir which might be read-only
+  NODE_OPTIONS="--max-old-space-size=450" npm install openclaw@latest \
+    --omit=dev \
+    --no-audit \
+    --no-fund \
+    --no-package-lock \
+    --prefer-offline
   echo "[bootstrap] ✅ Installation complete."
 fi
-
-export PATH="/app/node_modules/.bin:$PATH"
 
 CONFIG_DIR="${OPENCLAW_STATE_DIR:-$HOME/.openclaw}"
 CONFIG_FILE="$CONFIG_DIR/openclaw.json"
@@ -21,7 +25,7 @@ WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-$CONFIG_DIR/workspace}"
 
 # ── Fix Railway volume ownership ──────────────────────────────────────
 if [ -d "/data" ] && [ ! -w "/data" ]; then
-  echo "[bootstrap] WARNING: /data not writable by uid=$(id -u). Attempting chmod..."
+  echo "[bootstrap] WARNING: /data not writable. Attempting chmod..."
   chmod 777 /data 2>/dev/null || true
   install -d -m 777 /data 2>/dev/null || true
 fi
@@ -35,7 +39,7 @@ if [ -w "/data" ]; then
   WORKSPACE_DIR="/data/workspace"
   echo "[bootstrap] ✅ /data is writable — using persistent storage"
 else
-  echo "[bootstrap] ⚠️ /data not writable — falling back to $CONFIG_DIR"
+  echo "[bootstrap] ⚠️ /data not writable — using $CONFIG_DIR"
 fi
 
 # ── Validate required env vars ─────────────────────────────────────────
@@ -148,7 +152,7 @@ else
   ALLOWED_ORIGINS="[\"*\"]"
 fi
 
-# ── Write openclaw.json (Fixed zero-bug schema) ──────────────────────
+# ── Write openclaw.json ──────────────────────────────────────────────
 cat > "$CONFIG_FILE" << EOCONFIG
 {
   "\$schema": "openclaw",
