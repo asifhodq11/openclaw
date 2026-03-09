@@ -126,15 +126,8 @@ When the user sends /status, respond with:
 Format it compactly. No headers. Plain text.
 SKILL
 	
-# ── Detect Webhook / Allowed Origins ──────────────────────────────────
-if [ -n "${RAILWAY_STATIC_URL:-}" ]; then
-  WEBHOOK_CONFIG="\"webhookUrl\": \"https://${RAILWAY_STATIC_URL}/telegram/webhook\",
-      \"webhookSecret\": \"${OPENCLAW_GATEWAY_TOKEN:-changeme}\"," 
-  ALLOWED_ORIGINS="[\"https://${RAILWAY_STATIC_URL}\", \"http://localhost:18789\"]"
-else
-  WEBHOOK_CONFIG=""
-  ALLOWED_ORIGINS="[\"*\"]"
-fi
+# ── Webhook Mode Dropped ──────────────────────────────────────────────
+# Telegram polling is handled automatically and plays nicely with Railway.
 	
 # ── Write openclaw.json ──────────────────────────────────────────────
 cat > "$CONFIG_FILE" << EOCONFIG
@@ -148,19 +141,18 @@ cat > "$CONFIG_FILE" << EOCONFIG
       "botToken": "${TELEGRAM_BOT_TOKEN:-}",
       "dmPolicy": "allowlist",
       "allowFrom": ["${TELEGRAM_ALLOWED_USER_ID:-}"],
-      ${WEBHOOK_CONFIG}
       "groups": {}
     }
   },
   "gateway": {
-    "bind": "0.0.0.0",
+    "bind": "lan",
     "port": ${PORT:-8080},
     "auth": {
       "mode": "token",
       "token": "${OPENCLAW_GATEWAY_TOKEN:-}"
     },
     "trustedProxies": ["100.64.0.0/10", "10.0.0.0/8"],
-    "allowedOrigins": ${ALLOWED_ORIGINS}
+    "allowedOrigins": ["*"]
   },
   "agents": {
     "defaults": {
@@ -189,7 +181,6 @@ cat > "$CONFIG_FILE" << EOCONFIG
       "idleMinutes": 120
     }
   },
-  "memory": { "flush": true },
   "skills": {
     "load": {
       "extraDirs": ["/app/skills"]
@@ -198,7 +189,13 @@ cat > "$CONFIG_FILE" << EOCONFIG
 }
 EOCONFIG
 	
-echo "[bootstrap] ✅ openclaw.json generated successfully."
+# ── Validate JSON Syntax ──────────────────────────────────────────────
+node -e "JSON.parse(require('fs').readFileSync('$CONFIG_FILE'))" || {
+  echo "[bootstrap] FATAL: Invalid JSON syntax generated. Check openclaw.json payload." >&2
+  exit 1
+}
+
+echo "[bootstrap] ✅ openclaw.json generated and validated successfully."
 	
 # ── Start Gateway ─────────────────────────────────────────────────────
 export OPENCLAW_STATE_DIR="$CONFIG_DIR"
