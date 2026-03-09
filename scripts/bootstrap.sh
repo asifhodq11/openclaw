@@ -3,29 +3,13 @@ set -e
 
 echo "[bootstrap] OpenClaw Railway Edition starting..."
 
-# ── Runtime Installation ──────────────────────────────────────────────
-export PATH="/app/node_modules/.bin:$PATH"
-
-if [ ! -f "/app/node_modules/.bin/openclaw" ]; then
-  echo "[bootstrap] ⚙️ Installing openclaw at runtime..."
-  # Use flags to minimize disk IO and memory usage
-  # --no-package-lock prevents writing to the root dir which might be read-only
-  NODE_OPTIONS="--max-old-space-size=450" npm install openclaw@latest \
-    --omit=dev \
-    --no-audit \
-    --no-fund \
-    --no-package-lock \
-    --prefer-offline
-  echo "[bootstrap] ✅ Installation complete."
-fi
-
 CONFIG_DIR="${OPENCLAW_STATE_DIR:-$HOME/.openclaw}"
 CONFIG_FILE="$CONFIG_DIR/openclaw.json"
 WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-$CONFIG_DIR/workspace}"
 
 # ── Fix Railway volume ownership ──────────────────────────────────────
 if [ -d "/data" ] && [ ! -w "/data" ]; then
-  echo "[bootstrap] WARNING: /data not writable. Attempting chmod..."
+  echo "[bootstrap] WARNING: /data not writable by uid=$(id -u). Attempting chmod..."
   chmod 777 /data 2>/dev/null || true
   install -d -m 777 /data 2>/dev/null || true
 fi
@@ -39,18 +23,18 @@ if [ -w "/data" ]; then
   WORKSPACE_DIR="/data/workspace"
   echo "[bootstrap] ✅ /data is writable — using persistent storage"
 else
-  echo "[bootstrap] ⚠️ /data not writable — using $CONFIG_DIR"
+  echo "[bootstrap] ⚠️ /data not writable — memory will not persist across redeploys"
 fi
 
 # ── Validate required env vars ─────────────────────────────────────────
 if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
-  echo "[bootstrap] ERROR: TELEGRAM_BOT_TOKEN is not set." >&2; exit 1
+  echo "[bootstrap] FATAL: TELEGRAM_BOT_TOKEN is not set." >&2; exit 1
 fi
 if [ -z "${TELEGRAM_ALLOWED_USER_ID:-}" ]; then
-  echo "[bootstrap] ERROR: TELEGRAM_ALLOWED_USER_ID is not set. Must be numeric." >&2; exit 1
+  echo "[bootstrap] FATAL: TELEGRAM_ALLOWED_USER_ID not set — must be a numeric ID." >&2; exit 1
 fi
 if [ -z "${OPENCLAW_GATEWAY_TOKEN:-}" ]; then
-  echo "[bootstrap] ERROR: OPENCLAW_GATEWAY_TOKEN is not set." >&2; exit 1
+  echo "[bootstrap] FATAL: OPENCLAW_GATEWAY_TOKEN is not set." >&2; exit 1
 fi
 
 # ── Create required directories ───────────────────────────────────────
