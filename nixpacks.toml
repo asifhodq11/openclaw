@@ -1,0 +1,5 @@
+[build]
+installCommand = "npm install openclaw@latest --omit=dev --no-audit --no-fund"
+
+[start]
+command = "sh scripts/bootstrap.sh"
