@@ -5,7 +5,9 @@ WORKDIR /app
 # --ignore-scripts skips postinstall builds for native modules (sharp, node-pty,
 # sqlite-vec) that are not needed for a Telegram text bot. Eliminates exit 254.
 RUN apt-get update && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && git config --global url."https://github.com/".insteadOf ssh://git@github.com/ \
+    && git config --global url."https://github.com/".insteadOf "git@github.com:"
 
 RUN npm install openclaw@latest \
       --ignore-scripts \
