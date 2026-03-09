@@ -1,16 +1,26 @@
 FROM node:22-bookworm-slim
-
+	
 WORKDIR /app
-
-RUN npm install openclaw@latest --omit=dev --no-audit --no-fund
-
+	
+# --ignore-scripts skips postinstall builds for native modules (sharp, node-pty,
+# sqlite-vec) that are not needed for a Telegram text bot. Eliminates exit 254.
+RUN npm install openclaw@latest \
+      --ignore-scripts \
+      --omit=dev \
+      --no-audit \
+      --no-fund
+	
 ENV NODE_OPTIONS="--max-old-space-size=350"
 ENV PATH="/app/node_modules/.bin:$PATH"
-
+	
+# Runtime config generator
 COPY scripts/ ./scripts/
+RUN chmod +x ./scripts/bootstrap.sh
+	
+# Skills plug-and-play mount point.
+# To add a feature: create skills/<n>/SKILL.md in this repo and push.
+# No changes to Dockerfile, railway.toml, or bootstrap.sh ever needed.
 COPY skills/ ./skills/
-
-RUN sed -i 's/\r$//' ./scripts/bootstrap.sh && chmod +x ./scripts/bootstrap.sh
-
+	
 EXPOSE 8080
 CMD ["sh", "/app/scripts/bootstrap.sh"]

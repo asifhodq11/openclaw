@@ -1,10 +1,11 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
-
+	
 [deploy]
-startCommand = "sh scripts/bootstrap.sh"
+startCommand = "sh /app/scripts/bootstrap.sh"
 healthcheckPath = "/healthz"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
 numReplicas = 1
