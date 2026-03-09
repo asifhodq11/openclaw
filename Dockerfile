@@ -2,7 +2,8 @@ FROM node:22-bookworm-slim
 
 WORKDIR /app
 
-RUN npm install openclaw@latest --omit=dev --no-audit --no-fund
+# npm install openclaw needs more memory during build phase than the 512MB runtime limit
+RUN NODE_OPTIONS="--max-old-space-size=1024" npm install openclaw@latest --omit=dev --no-audit --no-fund
 
 ENV NODE_OPTIONS="--max-old-space-size=350"
 ENV PATH="/app/node_modules/.bin:$PATH"
